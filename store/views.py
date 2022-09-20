@@ -1,31 +1,27 @@
-from crypt import methods
-import imp
-from itertools import count
-from multiprocessing import context
+from django.db.models import Count
 from django.shortcuts import get_object_or_404
-from django.db.models import Count, F, Q
+
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
-from rest_framework.mixins import ListModelMixin, CreateModelMixin
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
-from rest_framework.views import APIView
-from rest_framework.decorators import api_view
+from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+from rest_framework.viewsets import ModelViewSet
+
+from store.pagination import DefaultPagination
+
+from .filters import ProductFilterSet
 from .models import Collection, OrderItem, Product, Review
 from .serializers import CollectionSerializer, ProductSerializer, ReviewSerializer
-from store import serializers
 
 
 class ProductViewSet(ModelViewSet):
+    queryset = Product.objects.all()
     serializer_class = ProductSerializer
-
-    def get_queryset(self):
-        queryset = Product.objects.all()
-        collection_id = self.request.query_params.get('collection_id')
-        if collection_id is not None:
-            queryset = queryset.filter(collection_id=collection_id)
-        
-        return queryset
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_class = ProductFilterSet
+    pagination_class = DefaultPagination
+    search_fields = ['title', 'description']
+    ordering_fields = ['unit_price', 'last_update']
 
     def get_serializer_context(self):
         return {'request': self.request}
