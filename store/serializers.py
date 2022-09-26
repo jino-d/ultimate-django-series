@@ -3,7 +3,7 @@ from dataclasses import fields
 from decimal import Decimal
 from itertools import product
 from rest_framework import serializers
-from store.models import CartItem, Product, Collection, Review, Cart
+from store.models import CartItem, Customer, OrderItem, Product, Collection, Review, Cart, Order
 
 
 class CollectionSerializer(serializers.ModelSerializer):
@@ -108,3 +108,31 @@ class CartSerializer(serializers.ModelSerializer):
     def get_total_price(self, cart):
         return sum(item.quantity * item.product.unit_price for item in cart.items.all())
 
+
+class CustomerSerializer(serializers.ModelSerializer):
+    user_id = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Customer
+        fields = ['id', 'user_id', 'phone', 'birth_date', 'membership']
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    product = SimpleProductSerializer()
+    total_price = serializers.SerializerMethodField()
+    
+    def get_total_price(self, order_item: OrderItem):
+        return order_item.quantity * order_item.unit_price
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'product', 'quantity', 'total_price']
+
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(read_only=True, many=True)
+    total_price = serializers.SerializerMethodField()
+    class Meta:
+        model = Order
+        fields = ['id', 'customer', 'placed_at', 'payment_status', 'items', 'total_price']
+
+    def get_total_price(self, order):
+        return sum(item.quantity * item.unit_price for item in order.items.all())
